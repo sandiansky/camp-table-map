@@ -14,7 +14,7 @@ export interface TableItem {
   id: string
   number: string
   shape: TableShape
-  seats: number
+  seats?: number
   zoneId: string
   x: number
   y: number
@@ -32,6 +32,8 @@ export interface Landmark {
   icon: string
   kind?: 'house' | 'tree' | 'rock' | 'tent' | 'fence' | 'entrance' | 'parking' | 'kitchen' | 'toilet' | 'custom'
   size?: 'small' | 'medium' | 'large'
+  lengthMeters?: number
+  widthMeters?: number
   x: number
   y: number
   createdAt: string

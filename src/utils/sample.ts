@@ -10,7 +10,7 @@ export const sampleData = (): CampData => {
   const timestamp = now()
   const nums = ['01', '02', '03', '05', '08', '11', '12']
   const tables: TableItem[] = nums.map((number, i) => ({
-    id: makeId(), number, shape: i % 3 === 0 ? 'round' : 'square', seats: 4, zoneId,
+    id: makeId(), number, shape: i % 3 === 0 ? 'round' : 'square', zoneId,
     x: 150 + (i % 3) * 190, y: 170 + Math.floor(i / 3) * 170,
     width: 92, height: 68, note: '', createdAt: timestamp, updatedAt: timestamp
   }))
