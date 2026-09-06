@@ -15,8 +15,10 @@ export const sampleData = (): CampData => {
     width: 92, height: 68, note: '', createdAt: timestamp, updatedAt: timestamp
   }))
   const landmarks: Landmark[] = [
-    ['入口', '↗️', 90, 620], ['大树', '🌳', 450, 400], ['出餐口', '🍳', 650, 90]
-  ].map(([label, icon, x, y]) => ({ id: makeId(), zoneId, label: String(label), icon: String(icon), x: Number(x), y: Number(y), createdAt: timestamp, updatedAt: timestamp }))
+    { label: '入口', icon: '🚪', kind: 'entrance' as const, x: 90, y: 620 },
+    { label: '大树', icon: '🌳', kind: 'tree' as const, x: 450, y: 400 },
+    { label: '出餐口', icon: '🍳', kind: 'kitchen' as const, x: 650, y: 90 }
+  ].map(item => ({ id: makeId(), zoneId, ...item, size: 'medium', createdAt: timestamp, updatedAt: timestamp }))
   return {
     version: 1,
     zones: [{ id: zoneId, name: '草坪 A 区', note: '示例片区', order: 0, createdAt: timestamp, updatedAt: timestamp }],

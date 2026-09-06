@@ -1,11 +1,11 @@
-import { MapPin, MoreHorizontal, Plus, Settings } from 'lucide-react'
+import { LibraryBig, MapPin, MoreHorizontal, Plus, Settings } from 'lucide-react'
 import { useState } from 'react'
 import type { CampData, TableItem, Zone } from '../types'
 import { SearchBox } from '../components/SearchBox'
 
-export function HomePage({ data, onOpenZone, onCreateZone, onEditZone, onSettings, onLoadSample }: {
+export function HomePage({ data, onOpenZone, onCreateZone, onEditZone, onSettings, onLibrary, onLoadSample }: {
   data: CampData; onOpenZone: (zoneId: string, tableId?: string) => void; onCreateZone: () => void;
-  onEditZone: (zone: Zone) => void; onSettings: () => void; onLoadSample: () => void
+  onEditZone: (zone: Zone) => void; onSettings: () => void; onLibrary: () => void; onLoadSample: () => void
 }) {
   const [search, setSearch] = useState('')
   const pick = (table: TableItem) => onOpenZone(table.zoneId, table.id)
@@ -19,7 +19,7 @@ export function HomePage({ data, onOpenZone, onCreateZone, onEditZone, onSetting
   </main>
 
   return <div className="page home-page">
-    <header className="home-head"><div><small>{data.settings.campName}</small><h1>桌位地图</h1><p>快速找到每一张桌子</p></div><button className="icon-btn" onClick={onSettings} aria-label="设置"><Settings size={22} /></button></header>
+    <header className="home-head"><div><small>{data.settings.campName}</small><h1>桌位地图</h1><p>快速找到每一张桌子</p></div><div className="home-actions"><button className="icon-btn" onClick={onLibrary} aria-label="桌位库"><LibraryBig size={21} /></button><button className="icon-btn" onClick={onSettings} aria-label="设置"><Settings size={22} /></button></div></header>
     <SearchBox value={search} onChange={setSearch} tables={data.tables} zones={data.zones} onPick={pick} />
     <section className="section"><div className="section-title"><h2>片区</h2><span>{data.zones.length} 个</span></div>
       <div className="zone-grid">{[...data.zones].sort((a,b) => a.order-b.order).map(zone => {

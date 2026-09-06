@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Download, Image as ImageIcon, Layers3, LocateFixed, MapPinned, MoreHorizontal, Plus, Search, Share2, Undo2 } from 'lucide-react'
+import { ArrowLeft, Check, Download, Image as ImageIcon, Layers3, LibraryBig, LocateFixed, MapPinned, MoreHorizontal, Plus, Search, Share2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
 import type { CampData, Landmark, LayoutTemplate, TableItem, TableShape, Zone } from '../types'
@@ -15,8 +15,9 @@ export function MapPage({ zone, data, initialTableId, onBack, update }: {
 }) {
   const [editing, setEditing] = useState(false), [confirmEdit, setConfirmEdit] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false), [search, setSearch] = useState('')
-  const [sheet, setSheet] = useState<'add'|'batch'|'background'|'landmark'|'more'|null>(null)
+  const [sheet, setSheet] = useState<'library'|'add'|'batch'|'background'|'landmark'|'more'|null>(null)
   const [selected, setSelected] = useState<TableItem | null>(null)
+  const [selectedLandmark, setSelectedLandmark] = useState<Landmark | null>(null)
   const [highlight, setHighlight] = useState<string | null>(null)
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.72 })
   const viewportRef = useRef<HTMLDivElement>(null), exportRef = useRef<HTMLDivElement>(null)
@@ -80,18 +81,20 @@ export function MapPage({ zone, data, initialTableId, onBack, update }: {
         <div className="export-title">{zone.name}<small>{data.settings.campName} · 桌位图</small></div>
         {zone.background?.visible && <img className="map-bg" src={zone.background.dataUrl} style={{opacity:zone.background.opacity}} alt="地图背景" draggable={false}/>} 
         {tables.map(table => <button key={table.id} className={`table-node shape-${table.shape} ${highlight===table.id?'highlight':''} ${highlight&&highlight!==table.id?'dim':''}`} style={{left:table.x,top:table.y,width:table.width,height:table.height}} onPointerDown={e => startItemDrag(e,table,'table')} onClick={e=>{e.stopPropagation(); if(editing)setSelected(table)}}><b>{table.number}</b><small>{table.seats}座</small></button>)}
-        {landmarks.map(mark => <button key={mark.id} className="landmark-node" style={{left:mark.x,top:mark.y}} onPointerDown={e => startItemDrag(e,mark,'landmark')}><span>{mark.icon}</span>{mark.label}</button>)}
+        {landmarks.map(mark => <button key={mark.id} className={`landmark-node scenery-${mark.kind??'custom'} size-${mark.size??'medium'}`} style={{left:mark.x,top:mark.y}} onPointerDown={e => startItemDrag(e,mark,'landmark')} onClick={e=>{e.stopPropagation();if(editing)setSelectedLandmark(mark)}}><span>{mark.icon}</span><b>{mark.label}</b></button>)}
       </div>
       <div className="zoom-controls"><button onClick={()=>setTransform(v=>({...v,scale:Math.min(2.5,v.scale+.15)}))}>＋</button><button onClick={()=>setTransform(v=>({...v,scale:Math.max(.35,v.scale-.15)}))}>−</button><button onClick={()=>setTransform({x:0,y:0,scale:.72})}><LocateFixed size={18}/></button></div>
       {!editing && <div className="view-hint">双指缩放 · 拖动查看</div>}
     </div>
-    {editing && <nav className="tool-bar"><button onClick={()=>setSheet('add')}><Plus/><span>桌位</span></button><button onClick={()=>setSheet('background')}><ImageIcon/><span>背景</span></button><button onClick={()=>setSheet('landmark')}><MapPinned/><span>地标</span></button><button onClick={()=>setSheet('more')}><MoreHorizontal/><span>更多</span></button><button className="save" onClick={()=>setEditing(false)}><Check/><span>保存</span></button></nav>}
+    {editing && <nav className="tool-bar"><button onClick={()=>setSheet('library')}><LibraryBig/><span>桌位库</span></button><button onClick={()=>setSheet('background')}><ImageIcon/><span>背景</span></button><button onClick={()=>setSheet('landmark')}><MapPinned/><span>固定物</span></button><button onClick={()=>setSheet('more')}><MoreHorizontal/><span>更多</span></button><button className="save" onClick={()=>setEditing(false)}><Check/><span>保存</span></button></nav>}
     {confirmEdit && <ConfirmDialog title="进入编辑模式？" message="进入后可以拖动、添加或修改桌位。" confirmText="进入编辑" onCancel={()=>setConfirmEdit(false)} onConfirm={()=>{setConfirmEdit(false);setEditing(true)}}/>}
+    {sheet==='library' && <ZoneTableLibrary tables={tables} onClose={()=>setSheet(null)} onAdd={()=>setSheet('add')} onBatch={()=>setSheet('batch')} onPick={table=>{setSheet(null);setSelected(table)}}/>}
     {sheet==='add' && <TableForm title="新建桌位" all={data.tables} zoneId={zone.id} onClose={()=>setSheet(null)} onBatch={()=>setSheet('batch')} onSave={table=>{update(d=>({...d,tables:[...d.tables,table]}));setSheet(null)}}/>}
     {sheet==='batch' && <BatchForm all={data.tables} zoneId={zone.id} onClose={()=>setSheet(null)} onSave={items=>{update(d=>({...d,tables:[...d.tables,...items]}));setSheet(null)}}/>}
     {selected && (editing ? <TableForm title="桌位设置" initial={selected} all={data.tables} zoneId={zone.id} onClose={()=>setSelected(null)} onSave={table=>{update(d=>({...d,tables:d.tables.map(t=>t.id===table.id?table:t)}));setSelected(null)}} onCopy={()=>{const copy={...selected,id:makeId(),number:`${selected.number}副本`,x:selected.x+30,y:selected.y+30,createdAt:now(),updatedAt:now()};update(d=>({...d,tables:[...d.tables,copy]}));setSelected(null)}} onDelete={()=>{if(confirm(`确定删除 ${selected.number} 号桌？`)){update(d=>({...d,tables:d.tables.filter(t=>t.id!==selected.id)}));setSelected(null)}}}/> : <BottomSheet title={`${selected.number} 号桌`} onClose={()=>setSelected(null)}><div className="table-detail"><div><span>桌型</span><b>{{round:'圆桌',square:'方桌',long:'长桌'}[selected.shape]}</b></div><div><span>座位数</span><b>{selected.seats} 人</b></div>{selected.note&&<div className="detail-note"><span>备注</span><b>{selected.note}</b></div>}</div></BottomSheet>)} 
     {sheet==='background' && <BackgroundSheet zone={zone} update={update} onClose={()=>setSheet(null)}/>} 
     {sheet==='landmark' && <LandmarkForm zoneId={zone.id} onClose={()=>setSheet(null)} onSave={mark=>{update(d=>({...d,landmarks:[...d.landmarks,mark]}));setSheet(null)}}/>}
+    {selectedLandmark&&<LandmarkForm zoneId={zone.id} initial={selectedLandmark} onClose={()=>setSelectedLandmark(null)} onSave={mark=>{update(d=>({...d,landmarks:d.landmarks.map(value=>value.id===mark.id?mark:value)}));setSelectedLandmark(null)}} onDelete={()=>{if(confirm(`确定删除“${selectedLandmark.label}”？`)){update(d=>({...d,landmarks:d.landmarks.filter(value=>value.id!==selectedLandmark.id)}));setSelectedLandmark(null)}}}/>} 
     {sheet==='more' && <MoreSheet zone={zone} data={data} update={update} onClose={()=>setSheet(null)} exportImage={exportImage}/>} 
   </div>
 }
@@ -115,7 +118,27 @@ function BackgroundSheet({zone,update,onClose}:{zone:Zone;update:Updater;onClose
   return <BottomSheet title="地图背景" onClose={onClose}><div className="form"><label className="upload"><ImageIcon/>选择现场照片、航拍图或平面图<input hidden type="file" accept="image/*" onChange={e=>void pick(e.target.files?.[0])}/></label>{zone.background&&<><label>透明度 <span>{Math.round(zone.background.opacity*100)}%</span><input type="range" min="0.1" max="1" step=".05" value={zone.background.opacity} onChange={e=>change({opacity:Number(e.target.value)})}/></label><button className="btn secondary wide" onClick={()=>change({visible:!zone.background?.visible})}>{zone.background.visible?'隐藏背景':'显示背景'}</button><button className="btn text-danger wide" onClick={()=>update(d=>({...d,zones:d.zones.map(z=>z.id===zone.id?{...z,background:undefined}:z)}))}>删除背景</button></>}</div></BottomSheet>
 }
 
-function LandmarkForm({zoneId,onClose,onSave}:{zoneId:string;onClose:()=>void;onSave:(v:Landmark)=>void}){const [label,setLabel]=useState(''),[icon,setIcon]=useState('📍');return <BottomSheet title="添加地标" onClose={onClose}><div className="form"><label>类型<div className="emoji-grid">{['📍','🌳','🚗','🍳','🚻','🚪','💰','🏞️'].map(v=><button className={icon===v?'active':''} onClick={()=>setIcon(v)} key={v}>{v}</button>)}</div></label><label>名称<input value={label} onChange={e=>setLabel(e.target.value)} placeholder="如 入口、厨房、大树"/></label><button className="btn primary wide" onClick={()=>{if(!label.trim())return alert('请输入地标名称');const stamp=now();onSave({id:makeId(),zoneId,label:label.trim(),icon,x:450,y:420,createdAt:stamp,updatedAt:stamp})}}>添加地标</button></div></BottomSheet>}
+function tableGroup(number:string){const first=number.trim().charAt(0).toLocaleUpperCase();return /\d/.test(first)?'数字桌号':first?`${first} 组`:'其他'}
+
+function ZoneTableLibrary({tables,onClose,onAdd,onBatch,onPick}:{tables:TableItem[];onClose:()=>void;onAdd:()=>void;onBatch:()=>void;onPick:(table:TableItem)=>void}){
+ const groups=tables.reduce<Record<string,TableItem[]>>((result,table)=>{const key=tableGroup(table.number);(result[key]??=[]).push(table);return result},{})
+ return <BottomSheet title="桌位库" onClose={onClose}><div className="library-sheet-actions"><button className="btn primary" onClick={onAdd}><Plus size={18}/>新建桌位</button><button className="btn secondary" onClick={onBatch}>批量添加</button></div>{Object.entries(groups).sort(([a],[b])=>a.localeCompare(b,'zh-CN')).map(([name,items])=><section className="sheet-table-group" key={name}><header><b>{name}</b><span>{items.length} 张</span></header><div>{items.sort((a,b)=>a.number.localeCompare(b.number,undefined,{numeric:true})).map(table=><button key={table.id} onClick={()=>onPick(table)}><b>{table.number}</b><small>{table.seats}座</small></button>)}</div></section>)}{tables.length===0&&<div className="library-empty compact"><LibraryBig/><p>当前片区还没有桌位</p></div>}</BottomSheet>
+}
+
+const sceneryOptions = [
+ {kind:'house',icon:'🏠',label:'房子'},{kind:'tree',icon:'🌳',label:'树木'},{kind:'rock',icon:'🪨',label:'石头'},
+ {kind:'tent',icon:'⛺',label:'帐篷'},{kind:'fence',icon:'🪵',label:'围栏'},{kind:'entrance',icon:'🚪',label:'入口'},
+ {kind:'parking',icon:'🚗',label:'停车场'},{kind:'kitchen',icon:'🍳',label:'出餐口'},{kind:'toilet',icon:'🚻',label:'厕所'},
+ {kind:'custom',icon:'📍',label:'其他'}
+] as const
+
+function LandmarkForm({zoneId,initial,onClose,onSave,onDelete}:{zoneId:string;initial?:Landmark;onClose:()=>void;onSave:(v:Landmark)=>void;onDelete?:()=>void}){
+ const initialOption=sceneryOptions.find(option=>option.kind===initial?.kind)||sceneryOptions.find(option=>option.icon===initial?.icon)||sceneryOptions[0]
+ const [kind,setKind]=useState<NonNullable<Landmark['kind']>>(initialOption.kind),[icon,setIcon]=useState(initial?.icon??initialOption.icon),[label,setLabel]=useState(initial?.label??initialOption.label),[size,setSize]=useState<NonNullable<Landmark['size']>>(initial?.size??'medium')
+ const choose=(option:typeof sceneryOptions[number])=>{setKind(option.kind);setIcon(option.icon);if(!initial||label===initialOption.label)setLabel(option.label)}
+ const save=()=>{if(!label.trim())return alert('请输入固定物名称');const stamp=now();onSave({...initial,id:initial?.id??makeId(),zoneId,label:label.trim(),icon,kind,size,x:initial?.x??450,y:initial?.y??420,createdAt:initial?.createdAt??stamp,updatedAt:stamp})}
+ return <BottomSheet title={initial?'固定物设置':'添加固定物'} onClose={onClose}><div className="form"><label>选择固定物<div className="scenery-grid">{sceneryOptions.map(option=><button className={kind===option.kind?'active':''} onClick={()=>choose(option)} key={option.kind}><span>{option.icon}</span><small>{option.label}</small></button>)}</div></label><label>显示名称<input value={label} onChange={e=>setLabel(e.target.value)} placeholder="如 木屋、老槐树、假山"/></label><label>显示大小<div className="segmented">{([['small','小'],['medium','中'],['large','大']] as const).map(([value,text])=><button className={size===value?'active':''} onClick={()=>setSize(value)} key={value}>{text}</button>)}</div></label><button className="btn primary wide" onClick={save}>{initial?'保存修改':'添加到地图中央'}</button>{onDelete&&<button className="btn text-danger wide" onClick={onDelete}>删除固定物</button>}</div></BottomSheet>
+}
 
 function MoreSheet({zone,data,update,onClose,exportImage}:{zone:Zone;data:CampData;update:Updater;onClose:()=>void;exportImage:(s:boolean)=>Promise<void>}){
  const [templateName,setTemplateName]=useState('');const templates=data.templates.filter(t=>t.zoneId===zone.id)

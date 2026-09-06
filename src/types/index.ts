@@ -30,6 +30,8 @@ export interface Landmark {
   zoneId: string
   label: string
   icon: string
+  kind?: 'house' | 'tree' | 'rock' | 'tent' | 'fence' | 'entrance' | 'parking' | 'kitchen' | 'toilet' | 'custom'
+  size?: 'small' | 'medium' | 'large'
   x: number
   y: number
   createdAt: string
